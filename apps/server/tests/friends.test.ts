@@ -208,5 +208,9 @@ describeDb("friends and user search", () => {
       expect((await search(ada, "x".repeat(101))).status).toBe(400);
       expect((await api("GET", "/users/search", { userId: ada })).status).toBe(400);
     });
+
+    it("NUL character in q -> 400, not a pg 500", async () => {
+      expect(await search(ada, "bo\u0000b")).toEqual({ status: 400, body: { error: expect.any(String) } });
+    });
   });
 });

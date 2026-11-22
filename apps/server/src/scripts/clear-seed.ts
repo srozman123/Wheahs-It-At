@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { getPool, withTransaction } from "../db/pool.js";
-import { clearSeedData } from "./clearSeed.js";
+import { clearSeedData } from "./seedCleanup.js";
 
 async function main(): Promise<void> {
   try {

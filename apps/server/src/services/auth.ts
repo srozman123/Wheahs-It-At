@@ -2,8 +2,10 @@ import bcrypt from "bcryptjs";
 import { HTTPException } from "hono/http-exception";
 import { createUser, findUserByEmail, type Me } from "../db/users.js";
 
-const BCRYPT_COST = 10;
+export const BCRYPT_COST = 10;
 const UNIQUE_VIOLATION = "23505";
+// Compared against when the email is unknown, so both failures take about as long.
+const DUMMY_HASH = "$2b$10$cuTBRU8AqYZy9VW2xCS0fuuKzjhGBFzb0nxuORcdUPwjVF8hHDsXC";
 
 export async function signup(name: string, email: string, password: string): Promise<Me> {
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
@@ -19,7 +21,7 @@ export async function signup(name: string, email: string, password: string): Pro
 
 export async function login(email: string, password: string): Promise<Me> {
   const user = await findUserByEmail(email);
-  const valid = user !== undefined && (await bcrypt.compare(password, user.passwordHash));
+  const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !valid) {
     throw new HTTPException(401, { message: "Invalid email or password" });
   }

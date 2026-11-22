@@ -2,7 +2,8 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
 import { getPool, withTransaction } from "../db/pool.js";
-import { clearSeedData } from "./clearSeed.js";
+import { BCRYPT_COST } from "../services/auth.js";
+import { clearSeedData } from "./seedCleanup.js";
 import {
   SEED_FRIENDSHIPS,
   SEED_PASSWORD,
@@ -12,8 +13,6 @@ import {
   buildSeedEvents,
   type SeedEvent,
 } from "./seedData.js";
-
-const BCRYPT_COST = 10;
 
 async function insertUsers(client: PoolClient, passwordHash: string): Promise<string[]> {
   const ids: string[] = [];

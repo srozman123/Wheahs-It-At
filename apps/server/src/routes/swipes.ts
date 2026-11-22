@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { upsertSwipe } from "../db/swipes.js";
+import { SWIPE_ACTIONS, upsertSwipe } from "../db/swipes.js";
 import { getPool } from "../db/pool.js";
 import { requireUser, type AuthedEnv } from "../middleware/requireUser.js";
 import { validate } from "../validation.js";
 
 const swipeSchema = z.object({
   eventId: z.uuid(),
-  action: z.enum(["pass", "save", "going", "removed"]),
+  action: z.enum(SWIPE_ACTIONS),
 });
 
 export const swipesRoutes = new Hono<AuthedEnv>()

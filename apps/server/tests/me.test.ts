@@ -58,6 +58,18 @@ describeDb("/me", () => {
     expect(res).toEqual({ status: 400, body: { error: expect.any(String) } });
   });
 
+  it("duplicate interests are stored once", async () => {
+    const res = await patch({ interests: ["music", "tech", "music"] });
+    expect(res.status).toBe(200);
+    expect(res.body.user.interests).toEqual(["music", "tech"]);
+    expect((await api("GET", "/me", { userId: me })).body.user.interests).toEqual(["music", "tech"]);
+  });
+
+  it("NUL character in name or a contact value -> 400, not a pg 500", async () => {
+    expect(await patch({ name: "Ada\u0000" })).toEqual({ status: 400, body: { error: expect.any(String) } });
+    expect(await patch({ contacts: { instagram: "@a\u0000da" } })).toEqual({ status: 400, body: { error: expect.any(String) } });
+  });
+
   it("empty name -> 400", async () => {
     expect((await patch({ name: "   " })).status).toBe(400);
   });

@@ -3,13 +3,12 @@ import { z } from "zod";
 import { listCardsBySwipeAction } from "../db/events.js";
 import { findMeById, updateMe, type Contacts } from "../db/users.js";
 import { requireUser, type AuthedEnv } from "../middleware/requireUser.js";
-import { TAGS } from "../tags.js";
-import { validate } from "../validation.js";
+import { interestsSchema, safeString, validate } from "../validation.js";
 
-const contactValue = z.string().trim().max(200);
+const contactValue = safeString.trim().max(200);
 
 const patchMeSchema = z.object({
-  name: z.string().trim().min(1).max(80).optional(),
+  name: safeString.trim().min(1).max(80).optional(),
   contacts: z
     .strictObject({
       instagram: contactValue.optional(),
@@ -18,7 +17,7 @@ const patchMeSchema = z.object({
       email: contactValue.optional(),
     })
     .optional(),
-  interests: z.array(z.enum(TAGS)).optional(),
+  interests: interestsSchema.optional(),
 });
 
 function dropEmptyValues(contacts: Contacts): Contacts {

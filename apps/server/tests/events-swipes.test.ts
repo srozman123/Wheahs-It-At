@@ -80,6 +80,17 @@ describeDb("events and swipes", () => {
       expect(going.body.events.map((e: { id: string }) => e.id)).toEqual([card.id]);
     });
 
+    it("duplicate tags are stored once", async () => {
+      const res = await api("POST", "/events", { userId: ada, body: validEvent({ tags: ["music", "drinks", "music"] }) });
+      expect(res.status).toBe(201);
+      expect(res.body.event.tags).toEqual(["music", "drinks"]);
+    });
+
+    it.each(["imageUrl", "sourceUrl"])("NUL in %s -> 400, not a pg 500", async (field) => {
+      const res = await api("POST", "/events", { userId: ada, body: validEvent({ [field]: "https://example.com/a\u0000b" }) });
+      expect(res).toEqual({ status: 400, body: { error: expect.any(String) } });
+    });
+
     it("optional fields default to null", async () => {
       const res = await api("POST", "/events", {
         userId: ada,
@@ -107,6 +118,9 @@ describeDb("events and swipes", () => {
       ["negative price", { priceMin: -1 }],
       ["empty title", { title: "  " }],
       ["non-URL imageUrl", { imageUrl: "not a url" }],
+      ["NUL in title", { title: "Jazz\u0000night" }],
+      ["NUL in description", { description: "Live\u0000jazz" }],
+      ["NUL in location", { location: "Wally\u0000s" }],
     ])("%s -> 400", async (_label, overrides) => {
       const res = await api("POST", "/events", { userId: ada, body: validEvent(overrides) });
       expect(res).toEqual({ status: 400, body: { error: expect.any(String) } });

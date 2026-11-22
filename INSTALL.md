@@ -1,6 +1,8 @@
 # Install the API on a fresh Vultr server
 
-Target: a fresh **Ubuntu 26.04** Vultr instance, logged in as `root` over SSH. See [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) for how the pieces fit together.
+Target: a fresh **Ubuntu 26.04** Vultr instance, logged in as `root` over SSH.
+
+**Prerequisite:** the instance must have been created with your SSH key attached (Vultr: Orchestration, SSH Keys). Step 2 copies root's key to the new user and step 3 disables password logins, so without a key you would lock yourself out. See [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) for how the pieces fit together.
 
 ## 1. Update the system (as root)
 
@@ -23,7 +25,19 @@ chmod 700 /home/app/.ssh && chmod 600 /home/app/.ssh/authorized_keys
 
 From now on, work as `app`. Either open a new terminal with `ssh app@<server-ip>` (check it works first), or run `su - app`.
 
-## 3. Firewall
+## 3. Harden SSH
+
+**First open a second terminal and confirm `ssh app@<server-ip>` works.** Keep your root session open until you have. Then, as `app`:
+
+```bash
+sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo sshd -t && sudo systemctl restart ssh
+```
+
+Ubuntu cloud images may override these in `/etc/ssh/sshd_config.d/*.conf`; check with `sudo sshd -T | grep -Ei 'permitrootlogin|passwordauthentication'` (both should say `no`). Test `ssh app@<server-ip>` again in a new terminal.
+
+## 4. Firewall
 
 **Allow OpenSSH before enabling ufw, or you lock yourself out.**
 
@@ -34,7 +48,7 @@ sudo ufw enable
 sudo ufw status
 ```
 
-## 4. Node 24
+## 5. Node 24
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
@@ -42,7 +56,7 @@ sudo apt install -y nodejs
 node -v   # must print v24.x
 ```
 
-## 5. Get the code
+## 6. Get the code
 
 The repo is private. Clone over HTTPS with a GitHub personal access token (read access to the repo) as the password, or add a deploy key and clone over SSH.
 
@@ -53,7 +67,7 @@ cd Wheahs-It-At/apps/server
 npm ci
 ```
 
-## 6. Configure `.env`
+## 7. Configure `.env`
 
 ```bash
 cp .env.example .env
@@ -65,17 +79,24 @@ chmod 600 .env
 - `PORT`: leave at `3000`.
 - If Tiger Data's IP allow-list is on, add this server's IPv4 to it (Tiger Cloud console).
 
-## 7. Create the tables (first time only)
+## 8. Create the tables (first time only)
 
 ```bash
 npm run db:setup -- --yes    # WARNING: drops and recreates ALL tables, wiping all data
 npm run db:seed              # optional: fake users and events for demos
-npm run db:clear-seed        # removes only the fake data (seed:// events, @seed.test users)
 ```
 
 Seed users log in with `<name>@seed.test` / `password123` (e.g. `alex@seed.test`).
 
-## 8. Run with pm2
+### Remove demo data later
+
+Removes only the fake data (`seed://` events and `@seed.test` users); real data is untouched.
+
+```bash
+npm run db:clear-seed
+```
+
+## 9. Run with pm2
 
 ```bash
 sudo npm i -g pm2
@@ -85,7 +106,7 @@ pm2 startup          # prints a command starting with "sudo env PATH=..."; copy 
 pm2 logs wheahs-api  # Ctrl+C to leave
 ```
 
-## 9. Verify
+## 10. Verify
 
 On the server:
 

@@ -1,6 +1,8 @@
 import type { Queryable } from "./queryable.js";
 
-export type SwipeAction = "pass" | "save" | "going" | "removed";
+export const SWIPE_ACTIONS = ["pass", "save", "going", "removed"] as const;
+
+export type SwipeAction = (typeof SWIPE_ACTIONS)[number];
 
 export type Swipe = { eventId: string; action: SwipeAction };
 

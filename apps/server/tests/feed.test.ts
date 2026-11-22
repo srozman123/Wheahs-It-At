@@ -57,6 +57,20 @@ describeDb("GET /feed", () => {
     expect(ids).toEqual([tech, plain]);
   });
 
+  it("a duplicated interest counts once in the feed score", async () => {
+    // Once: music event = 2 (interest) + ~0.14 (soonness at 6 days); friend-going event = 2 (boost) + ~0.99 (soon).
+    // The 0.85 gap beats randomness (0.5). Counted twice, the music event would win by ~1.15 instead.
+    const bob = await insertUser("Bob");
+    await makeFriends(ada, bob);
+    await api("PATCH", "/me", { userId: ada, body: { interests: ["music", "music"] } });
+    const music = await insertEvent({ tags: ["music"], startsAt: hoursFromNow(144) });
+    const friendGoing = await insertEvent({ tags: ["art"], startsAt: hoursFromNow(1) });
+    await swipe(bob, friendGoing, "going");
+
+    const ids = (await feed()).body.events.map((e: { id: string }) => e.id);
+    expect(ids).toEqual([friendGoing, music]);
+  });
+
   it("empty exclude is fine; malformed or too many exclude ids -> 400", async () => {
     expect((await feed("?exclude=")).status).toBe(200);
     expect(await feed("?exclude=not-a-uuid")).toEqual({ status: 400, body: { error: expect.any(String) } });

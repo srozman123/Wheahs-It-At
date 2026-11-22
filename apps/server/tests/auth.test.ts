@@ -69,6 +69,26 @@ describeDb("auth", () => {
     expect(unknownEmail).toEqual(wrongPassword);
   });
 
+  it("unknown email (no stored hash to compare) still -> the same 401, every time", async () => {
+    for (const email of ["nobody@example.com", "other@example.com"]) {
+      const res = await api("POST", "/auth/login", { body: { email, password: TEST_PASSWORD } });
+      expect(res).toEqual({ status: 401, body: { error: "Invalid email or password" } });
+    }
+  });
+
+  it("NUL character in name or password -> 400, not a pg 500", async () => {
+    for (const body of [signupBody("ada@example.com", "Ada\u0000"), { ...signupBody("ada@example.com"), password: "pass\u0000word" }]) {
+      const res = await api("POST", "/auth/signup", { body });
+      expect(res).toEqual({ status: 400, body: { error: expect.any(String) } });
+    }
+    const login = await api("POST", "/auth/login", { body: { email: "ada@example.com", password: "a\u0000" } });
+    expect(login.status).toBe(400);
+    for (const path of ["/auth/signup", "/auth/login"]) {
+      const res = await api("POST", path, { body: signupBody("ada\u0000@example.com") });
+      expect(res.status).toBe(400);
+    }
+  });
+
   it("login with an invalid body -> 400", async () => {
     expect((await api("POST", "/auth/login", { body: { email: "ada@example.com" } })).status).toBe(400);
     expect((await api("POST", "/auth/login", { body: {} })).status).toBe(400);

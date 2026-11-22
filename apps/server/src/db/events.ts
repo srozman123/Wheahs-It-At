@@ -51,7 +51,7 @@ const CARD_SELECT = `
          (e.starts_at < now()) AS expired
     FROM events e`;
 
-export async function queryCards(
+async function queryCards(
   db: Queryable,
   viewerId: string,
   sqlTail: string,

@@ -4,22 +4,21 @@ import { z } from "zod";
 import { createEvent, getCardById, listGoingUsers } from "../db/events.js";
 import { requireUser, type AuthedEnv } from "../middleware/requireUser.js";
 import { toPublicUsers } from "../services/friends.js";
-import { TAGS } from "../tags.js";
-import { validate } from "../validation.js";
+import { eventTagsSchema, safeString, validate, withoutNul } from "../validation.js";
 
 // Matches NUMERIC(8,2).
 const price = z.number().min(0).max(999999.99);
-const httpUrl = z.url({ protocol: /^https?$/ });
+const httpUrl = z.url({ protocol: /^https?$/ }).refine(...withoutNul);
 
 const newEventSchema = z
   .object({
-    title: z.string().trim().min(1).max(200),
-    description: z.string().max(5000).optional(),
-    tags: z.array(z.enum(TAGS)).min(1),
+    title: safeString.trim().min(1).max(200),
+    description: safeString.max(5000).optional(),
+    tags: eventTagsSchema,
     startsAt: z.iso
       .datetime({ offset: true })
       .refine((value) => new Date(value).getTime() > Date.now(), "must be in the future"),
-    location: z.string().max(300).optional(),
+    location: safeString.max(300).optional(),
     lat: z.number().min(-90).max(90).optional(),
     lng: z.number().min(-180).max(180).optional(),
     imageUrl: httpUrl.optional(),

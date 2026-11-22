@@ -38,8 +38,8 @@ export async function sendRequest(me: string, them: string): Promise<RequestStat
   if (outgoing === "accepted" || incoming === "accepted") {
     throw new HTTPException(409, { message: "Already friends" });
   }
-  if (incoming === "requested") {
-    await acceptRequest(me, them);
+  // The request may have vanished since findRelationship; then fall through and send our own.
+  if (incoming === "requested" && (await acceptRequest(me, them))) {
     return "accepted";
   }
   if (outgoing !== "requested") {
