@@ -69,3 +69,10 @@ wheahs-it-at/
 - **Config apart from code:** each package root holds only config, and all code lives in `src/`.
 - **Secrets stay on the server:** the database URL exists only in `apps/server/.env`, never in the app.
 - **Business logic stays out of screens:** screens render, and the logic lives in hooks and the API layer.
+
+## Note: `packages/shared` dropped (decided during backend work)
+- **No `packages/shared`.** Each app is self-contained, so it can be deployed on its own (only `apps/server` runs on Vultr).
+- **Tag list:** lives in `apps/server/src/tags.ts`. The server is the source of truth, and the app fetches it from `GET /tags` (for the onboarding TagPicker) instead of importing it.
+- **Feed weights:** `apps/server/src/feedConfig.ts`. Only the server uses them.
+- **Types** (`User`, `Event`, etc.): each app defines its own. The mobile app writes types that match the server's JSON responses.
+- This replaces the "Single source of truth" and "Dependency direction" principles above, and the `packages/` part of the folder tree.
