@@ -12,7 +12,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
 import { actionColor, FLIP_DURATION, fonts, springs } from '../theme';
 import { EventCard } from './EventCard';
 
@@ -24,7 +24,7 @@ export type SwipeCardHandle = {
 };
 
 type Props = {
-  event: Event;
+  event: Card;
   width: number;
   height: number;
   /** 0 → 1 as the card is dragged away; the deck uses it to grow the next card. */

@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '../components/Icon';
-import { useAppState } from '../hooks/useAppState';
+import { useFriends } from '../hooks/useFriends';
+import { useLibrary } from '../hooks/useLibrary';
 import { colors, fonts, springs } from '../theme';
 
 const META: Record<string, { icon: IconName; label: string; color: string }> = {
@@ -18,9 +19,10 @@ const META: Record<string, { icon: IconName; label: string; color: string }> = {
 /** Floating, outlined tab bar with a raised orange "Post" button in the middle. */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { swipes, friends } = useAppState();
-  const savedCount = Object.values(swipes).filter((a) => a === 'save').length;
-  const requests = friends.filter((f) => f.status === 'incoming').length;
+  const { saved } = useLibrary();
+  const { incoming } = useFriends();
+  const savedCount = saved.length;
+  const requests = incoming.length;
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]} pointerEvents="box-none">

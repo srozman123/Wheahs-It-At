@@ -22,6 +22,7 @@ type Props = {
   icon?: ReactNode;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
 };
 
 const HEIGHT = { sm: 42, md: 52, lg: 60 };
@@ -31,7 +32,7 @@ const FONT = { sm: 15, md: 18, lg: 20 };
  * The signature button: thick ink outline + a solid (unblurred) shadow
  * underneath. Pressing pushes the face down into its shadow.
  */
-export function ChunkyButton({ label, onPress, variant = 'green', size = 'md', icon, disabled, style }: Props) {
+export function ChunkyButton({ label, onPress, variant = 'green', size = 'md', icon, disabled, style, accessibilityLabel = label }: Props) {
   const v = VARIANTS[variant];
   const press = useSharedValue(0);
 
@@ -54,7 +55,7 @@ export function ChunkyButton({ label, onPress, variant = 'green', size = 'md', i
       onPress={onPress}
       style={[{ height: h + lift, opacity: disabled ? 0.45 : 1 }, style]}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
     >
       {/* the solid shadow / "edge" */}
       <View style={[styles.base, { height: h, top: lift, backgroundColor: v.edge, borderColor: colors.ink }]} />

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { getTag } from '../mocks/tags';
+import { getTag } from '../theme/tags';
 import { colors, fonts, line } from '../theme';
 
 /** Small colored tag on cards. Same color as the matching onboarding bubble. */

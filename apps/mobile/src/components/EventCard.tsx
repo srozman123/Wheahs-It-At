@@ -1,16 +1,16 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import type { Card } from '../api';
 import { useGoingPeople } from '../hooks/useGoingPeople';
-import type { Event } from '../mocks/types';
 import { colors, fonts, outline } from '../theme';
 import { friendlyTime, priceLabel } from '../utils/time';
-import { Avatar, AvatarStack } from './Avatar';
+import { Avatar } from './Avatar';
 import { EventArt } from './EventArt';
 import { Icon } from './Icon';
 import { TagPill } from './TagPill';
 
 type Props = {
-  event: Event;
+  event: Card;
   width: number;
   height: number;
   /** 0 = front, 1 = back. Driven by the deck so a tap can flip it. */
@@ -49,8 +49,7 @@ export function EventCard({ event, width, height, flip }: Props) {
   );
 }
 
-function Front({ event, height }: { event: Event; height: number }) {
-  const { friends } = useGoingPeople(event);
+function Front({ event, height }: { event: Card; height: number }) {
   const artHeight = Math.round(height * 0.46);
   return (
     <View style={styles.card}>
@@ -68,7 +67,7 @@ function Front({ event, height }: { event: Event; height: number }) {
         </Text>
         <View style={styles.row}>
           <Icon name="pin" size={18} color={colors.inkSoft} />
-          <Text style={styles.meta}>{event.location}</Text>
+          <Text style={styles.meta}>{event.location ?? 'Location TBA'}</Text>
         </View>
         <View style={styles.tags}>
           {event.tags.slice(0, 3).map((t) => (
@@ -77,13 +76,10 @@ function Front({ event, height }: { event: Event; height: number }) {
         </View>
         <View style={{ flex: 1 }} />
         <View style={styles.footer}>
-          {friends.length > 0 ? (
-            <>
-              <AvatarStack people={friends} size={28} />
-              <Text style={styles.footerText}>
-                {friends.length === 1 ? `${friends[0].name} is going` : `${friends.length} friends going`}
-              </Text>
-            </>
+          {event.friendsGoing > 0 ? (
+            <Text style={styles.footerText}>
+              {event.friendsGoing === 1 ? '1 friend going' : `${event.friendsGoing} friends going`}
+            </Text>
           ) : (
             <Text style={[styles.footerText, { color: colors.inkSoft }]}>No friends going yet — be the first!</Text>
           )}
@@ -94,21 +90,23 @@ function Front({ event, height }: { event: Event; height: number }) {
   );
 }
 
-function Back({ event }: { event: Event }) {
-  const { friends, others } = useGoingPeople(event);
+function Back({ event }: { event: Card }) {
+  const { friends, others } = useGoingPeople(event.id);
   const everyone = [...friends, ...others];
   return (
     <View style={[styles.card, styles.back]}>
       <Text style={styles.backTitle} numberOfLines={2}>
         {event.title}
       </Text>
-      <Text style={styles.desc} numberOfLines={6}>
-        {event.description}
-      </Text>
+      {event.description ? (
+        <Text style={styles.desc} numberOfLines={6}>
+          {event.description}
+        </Text>
+      ) : null}
 
       <View style={styles.infoBox}>
         <InfoRow icon="clock" text={friendlyTime(event.startsAt)} />
-        <InfoRow icon="pin" text={event.address} />
+        <InfoRow icon="pin" text={event.location ?? 'Location TBA'} />
         <InfoRow icon="ticket" text={priceLabel(event.priceMin, event.priceMax)} />
         {event.sourceUrl ? (
           <Pressable onPress={() => Linking.openURL(event.sourceUrl!)} hitSlop={8}>

@@ -2,16 +2,16 @@ import * as Haptics from 'expo-haptics';
 import { useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, type SharedValue } from 'react-native-reanimated';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
 import { EventCard } from './EventCard';
 import { GoingConfirm } from './GoingConfirm';
 import { SwipeCard, type DeckAction, type SwipeCardHandle } from './SwipeCard';
 
 type Props = {
-  deck: Event[];
+  deck: Card[];
   cardWidth: number;
   cardHeight: number;
-  onSwipe: (event: Event, action: DeckAction) => void;
+  onSwipe: (event: Card, action: DeckAction) => void;
   empty: ReactNode;
 };
 
@@ -22,7 +22,7 @@ type Props = {
 export function SwipeDeck({ deck, cardWidth, cardHeight, onSwipe, empty }: Props) {
   const progress = useSharedValue(0);
   const topRef = useRef<SwipeCardHandle>(null);
-  const [confirming, setConfirming] = useState<Event | null>(null);
+  const [confirming, setConfirming] = useState<Card | null>(null);
 
   const top = deck[0];
   const visible = deck.slice(0, 3);

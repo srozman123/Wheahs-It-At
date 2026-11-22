@@ -1,17 +1,14 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, LinearTransition, ZoomOut } from 'react-native-reanimated';
-import { useGoingPeople } from '../hooks/useGoingPeople';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
 import { colors, fonts, outline } from '../theme';
-import { friendlyTime, isExpired } from '../utils/time';
-import { AvatarStack } from './Avatar';
+import { friendlyTime } from '../utils/time';
 import { EventArt } from './EventArt';
 
 /** List row used by the Saved and Going tabs. */
-export function EventRow({ event, index, onPress, actions }: { event: Event; index: number; onPress: () => void; actions: ReactNode }) {
-  const expired = isExpired(event.startsAt);
-  const { friends } = useGoingPeople(event);
+export function EventRow({ event, index, onPress, actions }: { event: Card; index: number; onPress: () => void; actions: ReactNode }) {
+  const expired = event.expired;
   return (
     <Animated.View entering={FadeInDown.delay(index * 50).duration(250)} exiting={ZoomOut} layout={LinearTransition.duration(250)}>
       <Pressable onPress={onPress} style={({ pressed }) => [styles.row, expired && styles.expired, pressed && { transform: [{ scale: 0.98 }] }]}>
@@ -23,12 +20,11 @@ export function EventRow({ event, index, onPress, actions }: { event: Event; ind
             {event.title}
           </Text>
           <Text style={styles.meta} numberOfLines={1}>
-            {expired ? 'Already happened' : friendlyTime(event.startsAt)} · {event.location}
+            {expired ? 'Already happened' : friendlyTime(event.startsAt)}{event.location ? ` · ${event.location}` : ''}
           </Text>
-          {friends.length > 0 && !expired ? (
+          {event.friendsGoing > 0 && !expired ? (
             <View style={styles.friends}>
-              <AvatarStack people={friends} size={20} max={3} />
-              <Text style={styles.friendsText}>{friends.length} going</Text>
+              <Text style={styles.friendsText}>{event.friendsGoing === 1 ? '1 friend going' : `${event.friendsGoing} friends going`}</Text>
             </View>
           ) : null}
         </View>

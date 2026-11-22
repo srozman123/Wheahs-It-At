@@ -1,32 +1,31 @@
-import { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EventDetailModal } from '../components/EventDetailModal';
 import { EventRow, RowButton } from '../components/EventRow';
 import { Screen } from '../components/Screen';
+import { SwipeErrorBanner } from '../components/SwipeErrorBanner';
 import { SpeechBubble } from '../components/SpeechBubble';
 import { TrolleyMascot } from '../components/TrolleyMascot';
-import { useAppState } from '../hooks/useAppState';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
+import { useLibrary } from '../hooks/useLibrary';
 import { colors, fonts, line } from '../theme';
-import { isExpired } from '../utils/time';
 
 export function SavedScreen() {
-  const { events, swipes, swipe } = useAppState();
-  const [open, setOpen] = useState<Event | null>(null);
+  const { saved: savedCards, swipe, refresh } = useLibrary();
+  useFocusEffect(useCallback(() => void refresh(), [refresh]));
+  const [open, setOpen] = useState<Card | null>(null);
 
   // upcoming first (soonest on top), expired at the bottom
-  const saved = events
-    .filter((e) => swipes[e.id] === 'save')
-    .sort((a, b) => {
-      const ea = isExpired(a.startsAt);
-      const eb = isExpired(b.startsAt);
-      if (ea !== eb) return ea ? 1 : -1;
+  const saved = [...savedCards].sort((a, b) => {
+      if (a.expired !== b.expired) return a.expired ? 1 : -1;
       return a.startsAt.localeCompare(b.startsAt);
     });
 
   return (
     <Screen>
       <Text style={styles.title}>Saved</Text>
+      <SwipeErrorBanner />
 
       {saved.length === 0 ? (
         <View style={styles.empty}>
@@ -36,7 +35,7 @@ export function SavedScreen() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 8 }} showsVerticalScrollIndicator={false}>
           {saved.map((e, i) => {
-            const expired = isExpired(e.startsAt);
+            const expired = e.expired;
             return (
               <EventRow
                 key={e.id}
@@ -45,11 +44,11 @@ export function SavedScreen() {
                 onPress={() => setOpen(e)}
                 actions={
                   expired ? (
-                    <RowButton glyph="🗑" label="Remove" color={colors.inkSoft} soft={colors.paper} onPress={() => swipe(e.id, 'removed')} />
+                    <RowButton glyph="🗑" label="Remove" color={colors.inkSoft} soft={colors.paper} onPress={() => swipe(e, 'removed')} />
                   ) : (
                     <>
-                      <RowButton glyph="✕" label="Pass" color={line.red.dark} soft={line.red.soft} onPress={() => swipe(e.id, 'pass')} />
-                      <RowButton glyph="★" label="Going" color={line.green.dark} soft={line.green.soft} onPress={() => swipe(e.id, 'going')} />
+                      <RowButton glyph="✕" label="Pass" color={line.red.dark} soft={line.red.soft} onPress={() => swipe(e, 'pass')} />
+                      <RowButton glyph="★" label="Going" color={line.green.dark} soft={line.green.soft} onPress={() => swipe(e, 'going')} />
                     </>
                   )
                 }

@@ -1,17 +1,23 @@
-import { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { ChunkyButton } from '../components/ChunkyButton';
 import { Screen } from '../components/Screen';
+import { SwipeErrorBanner } from '../components/SwipeErrorBanner';
 import { SpeechBubble } from '../components/SpeechBubble';
 import { SwipeDeck } from '../components/SwipeDeck';
 import { TrolleyMascot } from '../components/TrolleyMascot';
-import { useAppState } from '../hooks/useAppState';
 import { useFeed } from '../hooks/useFeed';
+import { useLibrary } from '../hooks/useLibrary';
 import { colors, fonts } from '../theme';
 
 export function FeedScreen() {
-  const { user, swipe } = useAppState();
-  const { deck } = useFeed();
+  const { swipe } = useLibrary();
+  const { deck, loading, error, refresh } = useFeed();
   const [area, setArea] = useState({ w: 0, h: 0 });
+
+  // new events may have appeared while we were on another tab
+  useFocusEffect(useCallback(() => void refresh(), [refresh]));
 
   const cardW = Math.min(area.w, 420);
   const cardH = Math.max(0, Math.min(area.h - 24, cardW * 1.45));
@@ -28,19 +34,35 @@ export function FeedScreen() {
         </View>
       </View>
 
+      <SwipeErrorBanner />
+
       <View style={{ flex: 1, marginBottom: 78 }} onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         {area.h > 0 && (
           <SwipeDeck
             deck={deck}
             cardWidth={cardW}
             cardHeight={cardH}
-            onSwipe={(event, action) => swipe(event.id, action)}
+            onSwipe={(event, action) => swipe(event, action)}
             empty={
-              <View style={styles.empty}>
-                <SpeechBubble text="End of the line! You've seen everything this week." />
-                <TrolleyMascot size={180} mood="sleepy" sign="LAST STOP" />
-                <Text style={styles.emptyHint}>Check your Saved tab, or come back when new events roll in.</Text>
-              </View>
+              loading ? (
+                <View style={styles.empty}>
+                  <SpeechBubble text="Finding events for you…" />
+                  <TrolleyMascot size={180} mood="happy" />
+                </View>
+              ) : error ? (
+                <View style={styles.empty}>
+                  <SpeechBubble text={error} />
+                  <TrolleyMascot size={180} mood="oops" />
+                  <ChunkyButton label="Try again" variant="blue" onPress={() => void refresh()} style={styles.emptyBtn} />
+                </View>
+              ) : (
+                <View style={styles.empty}>
+                  <SpeechBubble text="No more events this week" />
+                  <TrolleyMascot size={180} mood="sleepy" sign="LAST STOP" />
+                  <Text style={styles.emptyHint}>Check your Saved tab, or look for new events.</Text>
+                  <ChunkyButton label="Refresh" variant="green" onPress={() => void refresh()} style={styles.emptyBtn} />
+                </View>
+              )
             }
           />
         )}
@@ -66,5 +88,6 @@ const styles = StyleSheet.create({
   counterNum: { fontFamily: fonts.bold, fontSize: 20, color: colors.ink, lineHeight: 24 },
   counterLabel: { fontFamily: fonts.semibold, fontSize: 11, color: colors.ink, marginTop: -4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10 },
+  emptyBtn: { alignSelf: 'stretch', marginTop: 8 },
   emptyHint: { fontFamily: fonts.medium, fontSize: 15, color: colors.inkSoft, textAlign: 'center' },
 });

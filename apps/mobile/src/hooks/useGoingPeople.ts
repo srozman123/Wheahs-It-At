@@ -1,26 +1,42 @@
-import { MOCK_PEOPLE } from '../mocks/events';
-import type { Event } from '../mocks/types';
-import { useAppState } from './useAppState';
+import { useEffect, useState } from 'react';
+import { getEvent } from '../api';
+import { avatarColor } from '../utils/avatarColor';
 
 export type Person = { id: string; name: string; color: string; isFriend: boolean };
 
+type GoingPeople = { friends: Person[]; others: Person[]; loading: boolean };
+
+const EMPTY: GoingPeople = { friends: [], others: [], loading: true };
+const NONE: GoingPeople = { friends: [], others: [], loading: false };
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Who's going to an event: accepted friends first, then other app users.
- * (DESIGN.md: attendee lists only count app users who marked Going.)
- * Later this comes back from the API with the event.
+ * Who's going to an event: friends first, then other app users, from GET /events/:id.
+ * Preview cards (ids that aren't server UUIDs, e.g. 'draft') are skipped; failures yield empty lists.
  */
-export function useGoingPeople(event: Event): { friends: Person[]; others: Person[] } {
-  const { friends } = useAppState();
-  const accepted = new Map(friends.filter((f) => f.status === 'accepted').map((f) => [f.id, f]));
-  const result = { friends: [] as Person[], others: [] as Person[] };
-  for (const id of event.goingUserIds) {
-    if (id === 'me') continue;
-    const f = accepted.get(id);
-    if (f) result.friends.push({ id, name: f.name, color: f.color, isFriend: true });
-    else {
-      const p = MOCK_PEOPLE[id] ?? friends.find((x) => x.id === id);
-      if (p) result.others.push({ id, name: p.name, color: p.color, isFriend: false });
+export function useGoingPeople(eventId: string): GoingPeople {
+  const [people, setPeople] = useState<GoingPeople>(EMPTY);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!UUID.test(eventId)) {
+      setPeople(NONE);
+      return;
     }
-  }
-  return result;
+    setPeople(EMPTY);
+    getEvent(eventId)
+      .then(({ going }) => {
+        if (cancelled) return;
+        const all = going.map((u) => ({ id: u.id, name: u.name, color: avatarColor(u.id), isFriend: u.isFriend }));
+        setPeople({ friends: all.filter((p) => p.isFriend), others: all.filter((p) => !p.isFriend), loading: false });
+      })
+      .catch(() => {
+        if (!cancelled) setPeople(NONE);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
+
+  return people;
 }

@@ -11,7 +11,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppStateProvider } from './src/hooks/useAppState';
+import { FriendsProvider } from './src/hooks/useFriends';
+import { LibraryProvider } from './src/hooks/useLibrary';
+import { SessionProvider } from './src/hooks/useSession';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 
@@ -35,10 +37,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.cream }}>
       <SafeAreaProvider>
-        <AppStateProvider>
-          <StatusBar style="dark" />
-          <RootNavigator />
-        </AppStateProvider>
+        <SessionProvider>
+          <LibraryProvider>
+            <FriendsProvider>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </FriendsProvider>
+          </LibraryProvider>
+        </SessionProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

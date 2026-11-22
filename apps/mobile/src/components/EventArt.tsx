@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { getTag } from '../mocks/tags';
+import { getTag } from '../theme/tags';
 import { line } from '../theme';
 
 /**

@@ -9,9 +9,9 @@ import { Screen } from '../components/Screen';
 import { SpeechBubble } from '../components/SpeechBubble';
 import { TextField } from '../components/TextField';
 import { TrolleyMascot } from '../components/TrolleyMascot';
-import { useAppState } from '../hooks/useAppState';
-import { TAGS } from '../mocks/tags';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
+import { usePostEvent } from '../hooks/usePostEvent';
+import { useTags } from '../theme/tags';
 import { colors, fonts } from '../theme';
 
 const STEPS = ['What', 'When & where', 'Vibe', 'Preview'];
@@ -23,6 +23,11 @@ const TIMES = [
 ];
 const MAX_TAGS = 3;
 
+/** A time slot is open unless it's already past today. */
+function slotOpen(dayOffset: number, hour: number) {
+  return dayOffset > 0 || hour > new Date().getHours();
+}
+
 function nextDays() {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -32,42 +37,51 @@ function nextDays() {
 }
 
 export function PostEventScreen({ onDone }: { onDone: () => void }) {
-  const { postEvent } = useAppState();
   const { width } = useWindowDimensions();
+  const TAGS = useTags();
+  const { post, posting, error, clearError } = usePostEvent();
   const [step, setStep] = useState(0);
   const [posted, setPosted] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [day, setDay] = useState(0);
-  const [time, setTime] = useState(TIMES[2].h);
+  const firstDay = TIMES.some((t) => slotOpen(0, t.h)) ? 0 : 1;
+  const [day, setDay] = useState(firstDay);
+  const [time, setTime] = useState((TIMES.find((t) => slotOpen(firstDay, t.h)) ?? TIMES[0]).h);
   const [location, setLocation] = useState('');
-  const [address, setAddress] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [free, setFree] = useState(true);
   const [price, setPrice] = useState('');
 
-  const startsAt = (() => {
+  const startsAtDate = (() => {
     const d = new Date();
     d.setDate(d.getDate() + day);
     d.setHours(time, 0, 0, 0);
-    return d.toISOString();
+    return d;
   })();
+  const startsAt = startsAtDate.toISOString();
 
-  const draft: Event = {
+  const pickDay = (offset: number) => {
+    setDay(offset);
+    if (!slotOpen(offset, time)) setTime((TIMES.find((t) => slotOpen(offset, t.h)) ?? TIMES[0]).h);
+  };
+
+  const draft: Card = {
     id: 'draft',
     title: title.trim() || 'Your event',
     description: description.trim() || 'No description yet.',
     tags,
     startsAt,
     location: location.trim() || 'Somewhere in Boston',
-    address: address.trim() || location.trim(),
+    lat: null,
+    lng: null,
     imageUrl: null,
     sourceUrl: null,
     priceMin: free ? 0 : Number(price) || null,
     priceMax: free ? 0 : Number(price) || null,
-    creatorId: 'me',
-    goingUserIds: [],
+    creatorId: null,
+    friendsGoing: 0,
+    expired: false,
   };
 
   const canNext = [title.trim().length > 2, location.trim().length > 1, tags.length > 0, true][step];
@@ -78,7 +92,7 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
     setTitle('');
     setDescription('');
     setLocation('');
-    setAddress('');
+    clearError();
     setTags([]);
     setFree(true);
     setPrice('');
@@ -129,7 +143,12 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
                 <Text style={styles.label}>Day</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                   {nextDays().map((d) => (
-                    <Pressable key={d.offset} onPress={() => setDay(d.offset)} style={[styles.dayChip, day === d.offset && styles.chipOn]}>
+                    <Pressable
+                      key={d.offset}
+                      disabled={!TIMES.some((t) => slotOpen(d.offset, t.h))}
+                      onPress={() => pickDay(d.offset)}
+                      style={[styles.dayChip, day === d.offset && styles.chipOn, !TIMES.some((t) => slotOpen(d.offset, t.h)) && styles.disabled]}
+                    >
                       <Text style={[styles.dayLabel, day === d.offset && styles.chipOnText]}>{d.label}</Text>
                       <Text style={[styles.dayNum, day === d.offset && styles.chipOnText]}>{d.date}</Text>
                     </Pressable>
@@ -138,13 +157,17 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
                 <Text style={styles.label}>Time</Text>
                 <View style={styles.wrapRow}>
                   {TIMES.map((t) => (
-                    <Pressable key={t.h} onPress={() => setTime(t.h)} style={[styles.chip, time === t.h && styles.chipOn]}>
+                    <Pressable
+                      key={t.h}
+                      disabled={!slotOpen(day, t.h)}
+                      onPress={() => setTime(t.h)}
+                      style={[styles.chip, time === t.h && styles.chipOn, !slotOpen(day, t.h) && styles.disabled]}
+                    >
                       <Text style={[styles.chipText, time === t.h && styles.chipOnText]}>{t.label}</Text>
                     </Pressable>
                   ))}
                 </View>
                 <TextField label="Neighborhood" placeholder="Allston, Back Bay, Somerville…" value={location} onChangeText={setLocation} />
-                <TextField label="Address (optional)" placeholder="123 Comm Ave" value={address} onChangeText={setAddress} />
                 <Text style={styles.label}>Price</Text>
                 <View style={styles.wrapRow}>
                   <Pressable onPress={() => setFree(true)} style={[styles.chip, free && styles.chipOn]}>
@@ -186,6 +209,7 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
               <View style={{ alignItems: 'center', gap: 10 }}>
                 <Text style={styles.label}>This is how it'll look in people's feeds:</Text>
                 <EventCard event={draft} width={cardW} height={cardW * 1.4} />
+                {error ? <Text style={[styles.label, { color: colors.red.base }]}>{error}</Text> : null}
               </View>
             )}
           </Animated.View>
@@ -194,15 +218,13 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
         <View style={styles.nav}>
           {step > 0 && <ChunkyButton label="←" variant="paper" onPress={() => setStep(step - 1)} style={{ width: 64 }} />}
           <ChunkyButton
-            label={step === STEPS.length - 1 ? 'Post it! 🚀' : 'Next →'}
+            label={step === STEPS.length - 1 ? (posting ? 'Posting…' : 'Post it! 🚀') : 'Next →'}
             variant={step === STEPS.length - 1 ? 'orange' : 'green'}
-            disabled={!canNext}
+            disabled={!canNext || posting}
             onPress={() => {
               if (step < STEPS.length - 1) setStep(step + 1);
               else {
-                const { id: _id, creatorId: _c, goingUserIds: _g, ...rest } = draft;
-                postEvent(rest);
-                setPosted(true);
+                post({ title, description, tags, startsAt: startsAtDate, location, free, price }).then((ok) => ok && setPosted(true));
               }
             }}
             style={{ flex: 1 }}
@@ -223,6 +245,7 @@ const styles = StyleSheet.create({
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 2.5, borderColor: colors.ink, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: colors.paper },
   chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  disabled: { opacity: 0.35 },
   chipOn: { backgroundColor: colors.ink },
   chipOnText: { color: colors.cream },
   dayChip: {
