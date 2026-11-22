@@ -58,7 +58,7 @@ node -v   # must print v24.x
 
 ## 6. Get the code
 
-The repo is private. Clone over HTTPS with a GitHub personal access token (read access to the repo) as the password, or add a deploy key and clone over SSH.
+The repo is public, so a plain HTTPS clone works with no token or key.
 
 ```bash
 cd ~
