@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { ChunkyButton } from '../components/ChunkyButton';
@@ -7,26 +7,32 @@ import { Screen } from '../components/Screen';
 import { SpeechBubble } from '../components/SpeechBubble';
 import { TextField } from '../components/TextField';
 import { TrolleyMascot, type Mood } from '../components/TrolleyMascot';
-import { useAppState } from '../hooks/useAppState';
+import { ApiError } from '../api';
+import { useSession } from '../hooks/useSession';
 import { colors, fonts, outline } from '../theme';
 
 type Mode = 'signup' | 'login';
 
 export function AuthScreen({ initialMode, onBack }: { initialMode: Mode; onBack: () => void }) {
-  const { signUp, logIn } = useAppState();
+  const { signUp, logIn } = useSession();
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [focus, setFocus] = useState<'email' | 'password' | null>(null);
+  const [focus, setFocus] = useState<'name' | 'email' | 'password' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const shake = useSharedValue(0);
 
-  const mood: Mood = error ? 'oops' : focus === 'password' ? 'sleepy' : focus === 'email' ? 'peek' : 'happy';
+  const mood: Mood = error ? 'oops' : focus === 'password' ? 'sleepy' : focus === 'email' || focus === 'name' ? 'peek' : 'happy';
   const line = error
     ? error
     : focus === 'password'
       ? "I'm not looking, promise 🙈"
-      : focus === 'email'
+      : focus === 'name'
+        ? 'Nice to meet you!'
+        : focus === 'email'
         ? 'Ooh, what\'s your email?'
         : mode === 'signup'
           ? 'Welcome aboard!'
@@ -34,13 +40,24 @@ export function AuthScreen({ initialMode, onBack }: { initialMode: Mode; onBack:
 
   const cardStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
 
-  // Mock auth: any valid-looking email + 6-char password works. Swap for src/api/auth later.
-  const submit = () => {
-    if (!/^\S+@\S+\.\S+$/.test(email)) return fail("Hmm, that email doesn't look right.");
-    if (password.length < 6) return fail('Password needs 6+ characters.');
+  const submit = async () => {
+    if (submitting.current) return;
+    const trimmedName = name.trim();
+    if (mode === 'signup' && (trimmedName.length < 1 || trimmedName.length > 80)) return fail('Tell us your name (up to 80 characters).');
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return fail("Hmm, that email doesn't look right.");
+    if (password.length < 8) return fail('Password needs 8+ characters.');
     setError(null);
-    if (mode === 'signup') signUp(email);
-    else logIn(email);
+    submitting.current = true;
+    setBusy(true);
+    try {
+      if (mode === 'signup') await signUp(trimmedName, email.trim(), password);
+      else await logIn(email.trim(), password);
+      // on success the navigator swaps this screen out
+    } catch (e) {
+      fail(e instanceof ApiError ? e.message : 'Something went wrong. Try again.');
+      submitting.current = false;
+      setBusy(false);
+    }
   };
 
   const fail = (msg: string) => {
@@ -85,6 +102,20 @@ export function AuthScreen({ initialMode, onBack }: { initialMode: Mode; onBack:
               ))}
             </View>
 
+            {mode === 'signup' && (
+              <TextField
+                label="Name"
+                placeholder="Alex"
+                autoComplete="name"
+                value={name}
+                onChangeText={(t) => {
+                  setName(t);
+                  setError(null);
+                }}
+                onFocus={() => setFocus('name')}
+                onBlur={() => setFocus(null)}
+              />
+            )}
             <TextField
               label="Email"
               placeholder="you@email.com"
@@ -113,9 +144,10 @@ export function AuthScreen({ initialMode, onBack }: { initialMode: Mode; onBack:
               onSubmitEditing={submit}
             />
             <ChunkyButton
-              label={mode === 'signup' ? 'Create account' : 'Log in'}
+              label={busy ? 'One moment…' : mode === 'signup' ? 'Create account' : 'Log in'}
               variant={mode === 'signup' ? 'green' : 'blue'}
               onPress={submit}
+              disabled={busy}
               style={{ marginTop: 6 }}
             />
           </Animated.View>

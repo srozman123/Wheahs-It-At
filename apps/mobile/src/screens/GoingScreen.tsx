@@ -1,29 +1,30 @@
-import { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EventDetailModal } from '../components/EventDetailModal';
 import { EventRow, RowButton } from '../components/EventRow';
 import { Screen } from '../components/Screen';
+import { SwipeErrorBanner } from '../components/SwipeErrorBanner';
 import { SpeechBubble } from '../components/SpeechBubble';
 import { TrolleyMascot } from '../components/TrolleyMascot';
-import { useAppState } from '../hooks/useAppState';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
+import { useLibrary } from '../hooks/useLibrary';
 import { colors, fonts, line } from '../theme';
-import { dayLabel, isExpired } from '../utils/time';
+import { dayLabel } from '../utils/time';
 
 const DAY_COLORS = [line.green, line.orange, line.blue, line.red, line.purple, line.yellow];
 
 /** Your week, like a little itinerary grouped by day. */
 export function GoingScreen() {
-  const { events, swipes, swipe } = useAppState();
-  const [open, setOpen] = useState<Event | null>(null);
+  const { going: goingCards, swipe, refresh } = useLibrary();
+  useFocusEffect(useCallback(() => void refresh(), [refresh]));
+  const [open, setOpen] = useState<Card | null>(null);
 
-  const going = events
-    .filter((e) => swipes[e.id] === 'going')
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const going = [...goingCards].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
-  const groups: { label: string; items: Event[] }[] = [];
+  const groups: { label: string; items: Card[] }[] = [];
   for (const e of going) {
-    const label = isExpired(e.startsAt) ? 'Already happened' : dayLabel(e.startsAt);
+    const label = e.expired ? 'Already happened' : dayLabel(e.startsAt);
     const g = groups.find((x) => x.label === label);
     if (g) g.items.push(e);
     else groups.push({ label, items: [e] });
@@ -34,6 +35,7 @@ export function GoingScreen() {
   return (
     <Screen>
       <Text style={styles.title}>Going</Text>
+      <SwipeErrorBanner />
 
       {going.length === 0 ? (
         <View style={styles.empty}>
@@ -61,7 +63,7 @@ export function GoingScreen() {
                       index={rowIndex++}
                       onPress={() => setOpen(e)}
                       actions={
-                        <RowButton glyph="✕" label="Remove" color={colors.inkSoft} soft={colors.paper} onPress={() => swipe(e.id, 'removed')} />
+                        <RowButton glyph="✕" label="Remove" color={colors.inkSoft} soft={colors.paper} onPress={() => swipe(e, 'removed')} />
                       }
                     />
                   ))}

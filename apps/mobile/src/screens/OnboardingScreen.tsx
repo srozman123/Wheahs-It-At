@@ -10,22 +10,39 @@ import { SpeechBubble } from '../components/SpeechBubble';
 import { SwipeCard, type DeckAction, type SwipeCardHandle } from '../components/SwipeCard';
 import { TextField } from '../components/TextField';
 import { TrolleyMascot } from '../components/TrolleyMascot';
-import { useAppState } from '../hooks/useAppState';
-import { TAGS } from '../mocks/tags';
-import type { ContactKind, Event } from '../mocks/types';
+import type { Card, ContactKind } from '../api';
+import { ApiError } from '../api';
+import { useSession } from '../hooks/useSession';
+import { useTags } from '../theme/tags';
 import { actionColor, colors, fonts } from '../theme';
 
 const MIN_INTERESTS = 3;
 
 export function OnboardingScreen() {
-  const { completeOnboarding } = useAppState();
+  const { updateProfile } = useSession();
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
   const [contactKind, setContactKind] = useState<ContactKind>('instagram');
   const [contact, setContact] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
 
-  const finish = () => completeOnboarding({ name: name.trim(), contactKind, contact: contact.trim(), interests });
+  const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Saving interests flips `onboarded`, and the navigator then swaps this screen out.
+  const finish = async () => {
+    if (submitting.current) return;
+    submitting.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await updateProfile({ contacts: { [contactKind]: contact.trim() }, interests });
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not save your profile. Try again.');
+      submitting.current = false;
+      setSaving(false);
+    }
+  };
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -36,8 +53,6 @@ export function OnboardingScreen() {
 
       {step === 0 && (
         <StepWho
-          name={name}
-          setName={setName}
           contactKind={contactKind}
           setContactKind={setContactKind}
           contact={contact}
@@ -52,7 +67,7 @@ export function OnboardingScreen() {
           onNext={() => setStep(2)}
         />
       )}
-      {step === 2 && <StepTutorial onDone={finish} />}
+      {step === 2 && <StepTutorial onDone={finish} saving={saving} error={error} />}
     </Screen>
   );
 }
@@ -67,8 +82,6 @@ const CONTACTS: { kind: ContactKind; label: string; placeholder: string }[] = [
 ];
 
 function StepWho(props: {
-  name: string;
-  setName: (s: string) => void;
   contactKind: ContactKind;
   setContactKind: (k: ContactKind) => void;
   contact: string;
@@ -76,20 +89,18 @@ function StepWho(props: {
   onNext: () => void;
 }) {
   const current = CONTACTS.find((c) => c.kind === props.contactKind)!;
-  const ready = props.name.trim().length > 0 && props.contact.trim().length > 0;
+  const ready = props.contact.trim().length > 0;
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Animated.View entering={FadeInRight.duration(250)} exiting={FadeOutLeft} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
           <View style={styles.mascotRow}>
             <TrolleyMascot size={96} mood="wink" />
-            <SpeechBubble text="First, who's riding with us?" style={{ flex: 1 }} />
+            <SpeechBubble text="How can friends reach you?" style={{ flex: 1 }} />
           </View>
 
-          <TextField label="Your first name" placeholder="Alex" value={props.name} onChangeText={props.setName} autoFocus />
-
           <View style={{ gap: 8 }}>
-            <Text style={styles.label}>How can friends reach you?</Text>
+            <Text style={styles.label}>Pick one to share with friends</Text>
             <View style={styles.chips}>
               {CONTACTS.map((c) => {
                 const on = c.kind === props.contactKind;
@@ -123,6 +134,7 @@ function StepWho(props: {
 /* ───────────── Step 2: interest bubbles ───────────── */
 
 function StepInterests({ interests, toggle, onNext }: { interests: string[]; toggle: (id: string) => void; onNext: () => void }) {
+  const TAGS = useTags();
   const left = MIN_INTERESTS - interests.length;
   const bubbleText =
     interests.length === 0 ? "What are you into? Tap a few!" : left > 0 ? `Nice! ${left} more…` : 'Ooh, great taste 😎';
@@ -157,20 +169,22 @@ function StepInterests({ interests, toggle, onNext }: { interests: string[]; tog
 
 /* ───────────── Step 3: learn the swipe by doing it ───────────── */
 
-const PRACTICE_EVENT: Event = {
+const PRACTICE_EVENT: Card = {
   id: 'practice',
   title: 'Practice Ride 🚋',
   description: 'This is a practice card. Flip it, swipe it, have fun with it.',
   tags: ['outdoors', 'networking'],
   startsAt: new Date(Date.now() + 2 * 3_600_000).toISOString(),
   location: 'Park Street',
-  address: 'Park St Station, Boston, MA',
+  lat: null,
+  lng: null,
   imageUrl: null,
   sourceUrl: null,
   priceMin: 0,
   priceMax: 0,
   creatorId: null,
-  goingUserIds: [],
+  friendsGoing: 0,
+  expired: false,
 };
 
 const LESSONS: { action: DeckAction; arrow: string; text: string }[] = [
@@ -179,7 +193,7 @@ const LESSONS: { action: DeckAction; arrow: string; text: string }[] = [
   { action: 'going', arrow: '↑', text: "Swipe up if you're Going" },
 ];
 
-function StepTutorial({ onDone }: { onDone: () => void }) {
+function StepTutorial({ onDone, saving, error }: { onDone: () => void; saving: boolean; error: string | null }) {
   const { width } = useWindowDimensions();
   const [done, setDone] = useState<DeckAction[]>([]);
   const [round, setRound] = useState(0);
@@ -240,7 +254,14 @@ function StepTutorial({ onDone }: { onDone: () => void }) {
         )}
       </View>
 
-      <ChunkyButton label={allDone ? 'Start swiping!' : 'Skip tutorial'} variant={allDone ? 'green' : 'paper'} size={allDone ? 'lg' : 'sm'} onPress={onDone} />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <ChunkyButton
+        label={saving ? 'Saving…' : allDone ? 'Start swiping!' : 'Skip tutorial'}
+        variant={allDone ? 'green' : 'paper'}
+        size={allDone ? 'lg' : 'sm'}
+        disabled={saving}
+        onPress={onDone}
+      />
     </Animated.View>
   );
 }
@@ -261,6 +282,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  error: { fontFamily: fonts.semibold, fontSize: 14, color: colors.red.dark, textAlign: 'center', marginBottom: 8 },
   note: { fontFamily: fonts.medium, fontSize: 13, color: colors.inkSoft },
   bubbles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', paddingVertical: 8, paddingBottom: 24 },
   checklist: { flexDirection: 'row', gap: 8, justifyContent: 'center' },

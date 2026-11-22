@@ -1,7 +1,7 @@
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useGoingPeople } from '../hooks/useGoingPeople';
-import type { Event } from '../mocks/types';
+import type { Card } from '../api';
 import { colors, fonts, outline } from '../theme';
 import { friendlyTime } from '../utils/time';
 import { AvatarStack } from './Avatar';
@@ -9,7 +9,7 @@ import { ChunkyButton } from './ChunkyButton';
 import { TrolleyMascot } from './TrolleyMascot';
 
 /** The "are you sure?" sheet before marking Going (DESIGN.md: swipe up shows a confirmation first). */
-export function GoingConfirm({ event, onConfirm, onCancel }: { event: Event | null; onConfirm: () => void; onCancel: () => void }) {
+export function GoingConfirm({ event, onConfirm, onCancel }: { event: Card | null; onConfirm: () => void; onCancel: () => void }) {
   return (
     <Modal transparent visible={event !== null} animationType="none" onRequestClose={onCancel}>
       {event ? <Content event={event} onConfirm={onConfirm} onCancel={onCancel} /> : null}
@@ -17,8 +17,8 @@ export function GoingConfirm({ event, onConfirm, onCancel }: { event: Event | nu
   );
 }
 
-function Content({ event, onConfirm, onCancel }: { event: Event; onConfirm: () => void; onCancel: () => void }) {
-  const { friends } = useGoingPeople(event);
+function Content({ event, onConfirm, onCancel }: { event: Card; onConfirm: () => void; onCancel: () => void }) {
+  const { friends } = useGoingPeople(event.id);
   return (
     <Animated.View entering={FadeIn.duration(150)} style={styles.backdrop}>
       <Animated.View entering={ZoomIn.duration(240).easing(Easing.out(Easing.cubic))} style={styles.sheet}>
@@ -29,7 +29,7 @@ function Content({ event, onConfirm, onCancel }: { event: Event; onConfirm: () =
         <Text style={styles.event} numberOfLines={2}>
           {event.title}
         </Text>
-        <Text style={styles.time}>{friendlyTime(event.startsAt)} · {event.location}</Text>
+        <Text style={styles.time}>{friendlyTime(event.startsAt)} · {event.location ?? 'Location TBA'}</Text>
         {friends.length > 0 ? (
           <View style={styles.friends}>
             <AvatarStack people={friends} size={26} />

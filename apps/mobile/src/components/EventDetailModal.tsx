@@ -1,8 +1,9 @@
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, FadeIn, SlideInDown, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useAppState } from '../hooks/useAppState';
+import type { Card } from '../api';
+import { useFriends } from '../hooks/useFriends';
 import { useGoingPeople } from '../hooks/useGoingPeople';
-import type { Event } from '../mocks/types';
+import { useLibrary } from '../hooks/useLibrary';
 import { colors, FLIP_DURATION, fonts } from '../theme';
 import { Avatar } from './Avatar';
 import { EventCard } from './EventCard';
@@ -11,7 +12,7 @@ import { EventCard } from './EventCard';
  * Opens a card from a list. Tap the card to flip it. If you're Going, you can
  * add other app users who are going (DESIGN.md → Friends → add people from events).
  */
-export function EventDetailModal({ event, onClose }: { event: Event | null; onClose: () => void }) {
+export function EventDetailModal({ event, onClose }: { event: Card | null; onClose: () => void }) {
   return (
     <Modal transparent visible={event !== null} animationType="none" onRequestClose={onClose}>
       {event ? <Content event={event} onClose={onClose} /> : null}
@@ -19,12 +20,13 @@ export function EventDetailModal({ event, onClose }: { event: Event | null; onCl
   );
 }
 
-function Content({ event, onClose }: { event: Event; onClose: () => void }) {
+function Content({ event, onClose }: { event: Card; onClose: () => void }) {
   const { width, height } = useWindowDimensions();
-  const { swipes, friends, requestFriend } = useAppState();
-  const { others } = useGoingPeople(event);
+  const { going } = useLibrary();
+  const { friends, outgoing, sendRequest } = useFriends();
+  const { others } = useGoingPeople(event.id);
   const flip = useSharedValue(0);
-  const iAmGoing = swipes[event.id] === 'going';
+  const iAmGoing = going.some((c) => c.id === event.id);
 
   const cardW = Math.min(width - 40, 400);
   const cardH = Math.min(height * 0.62, cardW * 1.4);
@@ -45,17 +47,18 @@ function Content({ event, onClose }: { event: Event; onClose: () => void }) {
           <View style={[styles.people, { width: cardW }]}>
             <Text style={styles.peopleTitle}>Also going — add them?</Text>
             {others.map((p) => {
-              const existing = friends.find((f) => f.id === p.id);
+              const isFriend = friends.some((u) => u.id === p.id);
+              const requested = isFriend || outgoing.some((u) => u.id === p.id);
               return (
                 <View key={p.id} style={styles.personRow}>
                   <Avatar name={p.name} color={p.color} size={30} />
                   <Text style={styles.personName}>{p.name}</Text>
                   <Pressable
-                    disabled={!!existing}
-                    onPress={() => requestFriend(p.id, p.name, p.color)}
-                    style={[styles.addBtn, existing && { backgroundColor: colors.sand }]}
+                    disabled={requested}
+                    onPress={() => sendRequest(p.id).catch(() => {})}
+                    style={[styles.addBtn, requested && { backgroundColor: colors.sand }]}
                   >
-                    <Text style={styles.addText}>{existing ? 'Requested' : '+ Add'}</Text>
+                    <Text style={styles.addText}>{isFriend ? 'Friends' : requested ? 'Requested' : '+ Add'}</Text>
                   </Pressable>
                 </View>
               );

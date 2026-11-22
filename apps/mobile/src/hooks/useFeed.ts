@@ -1,69 +1,86 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { FEED_CONFIG } from '../mocks/feedConfig';
-import type { Event, SwipeAction } from '../mocks/types';
-import { isThisWeek } from '../utils/time';
-import { useAppState } from './useAppState';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError, getFeed, type Card } from '../api';
+import { useLibrary } from './useLibrary';
+import { useSession } from './useSession';
+
+const LOW_WATER = 2;
+
+type Feed = {
+  /** Cards still to swipe, top first. */
+  deck: Card[];
+  /** True while a fetch is in flight. */
+  loading: boolean;
+  error: string | null;
+  /** Clears the "nothing new" stop and fetches more if the deck is running low. */
+  refresh: () => Promise<void>;
+};
 
 /**
- * Builds the card deck in batches, as described in DESIGN.md → "Building the feed".
- * Locally ranked for now; later the batch comes from the server's /feed endpoint.
+ * The swipe deck, served by GET /feed. Fetches the next batch when 2 or fewer
+ * cards remain, excluding everything acted on this session and the deck itself.
+ * Once the server returns nothing new it stops until refresh() is called.
  */
-export function useFeed() {
-  const { events, swipes, user, friends } = useAppState();
-  const [batch, setBatch] = useState<string[]>([]);
-  const swipesRef = useRef(swipes);
-  swipesRef.current = swipes;
+export function useFeed(): Feed {
+  const { user } = useSession();
+  const { actedIds } = useLibrary();
+  const userId = user?.id ?? null;
+  const [batch, setBatch] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [exhausted, setExhausted] = useState(false);
 
-  const friendIds = useMemo(
-    () => new Set(friends.filter((f) => f.status === 'accepted').map((f) => f.id)),
-    [friends],
-  );
+  const inFlight = useRef(false);
+  // Bumped on user change; a fetch that finishes under an older generation is dropped.
+  const generation = useRef(0);
+  const deck = batch.filter((c) => !actedIds.has(c.id));
+  const deckRef = useRef(deck);
+  deckRef.current = deck;
+  const actedRef = useRef(actedIds);
+  actedRef.current = actedIds;
 
-  const buildBatch = () => {
-    const acted = swipesRef.current;
-    const candidates = events.filter((e) => !(e.id in acted) && isThisWeek(e.startsAt));
-
-    // Tag scores are calculated from onboarding interests + past swipes, never stored.
-    const tagScore: Record<string, number> = {};
-    for (const t of user?.interests ?? []) tagScore[t] = (tagScore[t] ?? 0) + FEED_CONFIG.weights.onboarding;
-    for (const [eventId, action] of Object.entries(acted)) {
-      const ev = events.find((e) => e.id === eventId);
-      ev?.tags.forEach((t) => (tagScore[t] = (tagScore[t] ?? 0) + FEED_CONFIG.weights[action as SwipeAction]));
+  const fetchMore = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    const mine = generation.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const held = new Set(deckRef.current.map((c) => c.id));
+      const next = await getFeed([...actedRef.current, ...held]);
+      if (mine !== generation.current) return;
+      const fresh = next.filter((c) => !held.has(c.id) && !actedRef.current.has(c.id));
+      if (fresh.length === 0) setExhausted(true);
+      else setBatch([...deckRef.current, ...fresh]);
+    } catch (e) {
+      if (mine === generation.current) setError(e instanceof ApiError ? e.message : 'Could not load events.');
+    } finally {
+      if (mine === generation.current) {
+        inFlight.current = false;
+        setLoading(false);
+      }
     }
+  }, []);
 
-    const now = Date.now();
-    const score = (e: Event) => {
-      const interest = e.tags.reduce((sum, t) => sum + (tagScore[t] ?? 0), 0);
-      const friendBoost = e.goingUserIds.filter((id) => friendIds.has(id)).length * FEED_CONFIG.friendGoingBoost;
-      const daysAway = (new Date(e.startsAt).getTime() - now) / 86_400_000;
-      const soonness = FEED_CONFIG.soonnessWeight * Math.max(0, 7 - daysAway) / 7;
-      return interest + friendBoost + soonness + Math.random() * FEED_CONFIG.randomness;
-    };
-
-    const ranked = [...candidates].sort((a, b) => score(b) - score(a));
-    // Every Nth card is a random wildcard for exploration.
-    for (let i = FEED_CONFIG.wildcardEvery - 1; i < ranked.length; i += FEED_CONFIG.wildcardEvery) {
-      const j = i + Math.floor(Math.random() * (ranked.length - i));
-      [ranked[i], ranked[j]] = [ranked[j], ranked[i]];
-    }
-    return ranked.slice(0, FEED_CONFIG.batchSize).map((e) => e.id);
-  };
-
-  // Cards still to swipe in the current batch.
-  const remaining = batch.filter((id) => !(id in swipes));
-
-  // Fetch the next batch when we're near the end (also covers first load and newly posted events).
+  // New user (login/logout): start over.
   useEffect(() => {
-    if (remaining.length <= 2) {
-      const next = buildBatch().filter((id) => !remaining.includes(id));
-      if (next.length > 0) setBatch([...remaining, ...next]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining.length, events.length]);
+    generation.current++;
+    inFlight.current = false;
+    setLoading(false);
+    setBatch([]);
+    setExhausted(false);
+    setError(null);
+  }, [userId]);
 
-  const deck = remaining
-    .map((id) => events.find((e) => e.id === id))
-    .filter((e): e is Event => Boolean(e));
+  // Initial load and top-ups. A failure also pauses this until the user retries.
+  useEffect(() => {
+    if (userId && !exhausted && !error && deck.length <= LOW_WATER) void fetchMore();
+  }, [userId, exhausted, error, deck.length, fetchMore]);
 
-  return { deck };
+  const refresh = useCallback(async () => {
+    setExhausted(false);
+    setError(null);
+    if (deckRef.current.length <= LOW_WATER) await fetchMore();
+  }, [fetchMore]);
+
+  return { deck, loading, error, refresh };
 }

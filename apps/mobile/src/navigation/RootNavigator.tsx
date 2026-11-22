@@ -1,8 +1,10 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DefaultTheme, NavigationContainer, type Theme } from '@react-navigation/native';
+import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAppState } from '../hooks/useAppState';
+import { useSession } from '../hooks/useSession';
 import { AuthScreen } from '../screens/AuthScreen';
+import { ConnectionErrorScreen } from '../screens/ConnectionErrorScreen';
 import { FeedScreen } from '../screens/FeedScreen';
 import { FriendsScreen } from '../screens/FriendsScreen';
 import { GoingScreen } from '../screens/GoingScreen';
@@ -45,7 +47,16 @@ function MainTabs() {
  * Otherwise → the tabs. Switching state swaps the whole stack.
  */
 export function RootNavigator() {
-  const { user, onboarded } = useAppState();
+  const { user, onboarded, hydrated, hydrateError, retryHydrate } = useSession();
+
+  // Wait for the saved session check so a returning user never flashes the Welcome screen.
+  if (!hydrated) {
+    return hydrateError ? (
+      <ConnectionErrorScreen onRetry={retryHydrate} />
+    ) : (
+      <View style={{ flex: 1, backgroundColor: colors.cream }} />
+    );
+  }
 
   return (
     <NavigationContainer theme={theme}>
