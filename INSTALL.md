@@ -75,7 +75,7 @@ nano .env
 chmod 600 .env
 ```
 
-- `DATABASE_URL`: the Tiger Data **direct** connection string, ending in `?sslmode=require`.
+- `DATABASE_URL`: the Tiger Data **direct** connection string, ending in `?sslmode=require&uselibpqcompat=true` (Tiger uses its own CA; without the flag `pg` rejects the cert).
 - `PORT`: leave at `3000`.
 - If Tiger Data's IP allow-list is on, add this server's IPv4 to it (Tiger Cloud console).
 
@@ -135,7 +135,7 @@ pm2 restart wheahs-api
 
 - **Laptop can't reach port 3000:** check `sudo ufw status` shows 3000/tcp, and that nothing else blocks it (some Wi-Fi networks do; try a phone hotspot). `curl localhost:3000/health` on the server tells you whether the API itself is up.
 - **Database connection refused or timeout:** the server's IPv4 is probably missing from Tiger Data's allow-list, or `DATABASE_URL` is wrong. Check `pm2 logs wheahs-api`.
-- **SSL errors:** make sure the connection string ends with `?sslmode=require` and is the direct connection string.
+- **SSL errors:** make sure the connection string ends with `?sslmode=require&uselibpqcompat=true` and is the direct connection string. `self-signed certificate in certificate chain` means the flag is missing.
 - **API doesn't come back after a reboot:** run `pm2 save` after starting it, and make sure you ran the command `pm2 startup` printed. Check with `pm2 status`.
 
 ## Security note
