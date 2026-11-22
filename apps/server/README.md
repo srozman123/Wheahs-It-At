@@ -48,5 +48,7 @@ JSON in and out; errors are `{ "error": "..." }`. Authenticated routes need an `
 | `GET /friends/requests` | yes | Incoming and outgoing requests |
 | `POST /friends/requests` | yes | Send a request (accepts if they already asked) |
 | `POST /friends/requests/:userId/accept` | yes | Accept a request |
+| `POST /friends/requests/:userId/decline` | yes | Decline a request (deletes it) |
+| `DELETE /friends/:userId` | yes | Unfriend (removes both rows) |
 | `GET /friends/events` | yes | Upcoming events friends are going to |
 | `GET /users/search?q=` | yes | Find users by name or exact email |

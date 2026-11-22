@@ -89,3 +89,23 @@ export function acceptRequest(me: string, them: string): Promise<boolean> {
     return true;
   });
 }
+
+// Removes their pending request to me. Returns false when there was none.
+export async function deletePendingRequest(from: string, to: string): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    "DELETE FROM friends WHERE user_id = $1 AND friend_id = $2 AND status = 'requested'",
+    [from, to],
+  );
+  return rowCount === 1;
+}
+
+// Removes both accepted rows in one statement. Returns false when they weren't friends.
+export async function deleteFriendship(a: string, b: string): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `DELETE FROM friends
+      WHERE status = 'accepted'
+        AND ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))`,
+    [a, b],
+  );
+  return (rowCount ?? 0) > 0;
+}

@@ -213,4 +213,130 @@ describeDb("friends and user search", () => {
       expect(await search(ada, "bo\u0000b")).toEqual({ status: 400, body: { error: expect.any(String) } });
     });
   });
+
+  describe("POST /friends/requests/:userId/decline (B1)", () => {
+    const decline = (me: string, from: string) => api("POST", `/friends/requests/${from}/decline`, { userId: me });
+
+    it("removes the request from my incoming and their outgoing", async () => {
+      await request(bob, ada);
+      expect(await decline(ada, bob)).toEqual({ status: 200, body: { ok: true } });
+      expect(await friendRows()).toEqual([]);
+      expect((await api("GET", "/friends/requests", { userId: ada })).body).toEqual({ incoming: [], outgoing: [] });
+      expect((await api("GET", "/friends/requests", { userId: bob })).body).toEqual({ incoming: [], outgoing: [] });
+    });
+
+    it("no request -> 404", async () => {
+      expect(await decline(ada, bob)).toEqual({ status: 404, body: { error: expect.any(String) } });
+    });
+
+    it("declining my own outgoing request -> 404, and it stays pending", async () => {
+      await request(ada, bob);
+      expect((await decline(ada, bob)).status).toBe(404);
+      expect(await friendRows()).toEqual([`${ada}->${bob}:requested`]);
+    });
+
+    it("already friends -> 404, and the friendship is intact", async () => {
+      await makeFriends(bob, ada);
+      expect((await decline(ada, bob)).status).toBe(404);
+      expect(await friendRows()).toEqual([`${ada}->${bob}:accepted`, `${bob}->${ada}:accepted`].sort());
+    });
+
+    it("malformed id -> 400", async () => {
+      expect((await decline(ada, "not-a-uuid")).status).toBe(400);
+    });
+
+    it("the requester can request again afterwards", async () => {
+      await request(bob, ada);
+      await decline(ada, bob);
+      expect(await request(bob, ada)).toEqual({ status: 201, body: { status: "requested" } });
+      expect(await friendRows()).toEqual([`${bob}->${ada}:requested`]);
+    });
+
+    it("no auth -> 401", async () => {
+      await request(bob, ada);
+      expect((await api("POST", `/friends/requests/${bob}/decline`)).status).toBe(401);
+      expect(await friendRows()).toEqual([`${bob}->${ada}:requested`]);
+    });
+  });
+
+  describe("DELETE /friends/:userId (B2)", () => {
+    const unfriend = (me: string, them: string) => api("DELETE", `/friends/${them}`, { userId: me });
+
+    it("removes both rows and the friend from both users' /friends", async () => {
+      await makeFriends(ada, bob);
+      expect(await unfriend(ada, bob)).toEqual({ status: 200, body: { ok: true } });
+      expect(await friendRows()).toEqual([]);
+      expect((await api("GET", "/friends", { userId: ada })).body).toEqual({ friends: [] });
+      expect((await api("GET", "/friends", { userId: bob })).body).toEqual({ friends: [] });
+    });
+
+    it("works from the other side too", async () => {
+      await makeFriends(ada, bob);
+      expect((await unfriend(bob, ada)).status).toBe(200);
+      expect(await friendRows()).toEqual([]);
+    });
+
+    it("only removes this friendship", async () => {
+      const cat = await insertUser("Cat");
+      await makeFriends(ada, bob);
+      await makeFriends(ada, cat);
+      await unfriend(ada, bob);
+      expect(await friendRows()).toEqual([`${ada}->${cat}:accepted`, `${cat}->${ada}:accepted`].sort());
+    });
+
+    it("hides contacts again in event going lists and search", async () => {
+      await makeFriends(ada, bob);
+      const eventId = await insertEvent({ startsAt: hoursFromNow(5) });
+      await swipe(bob, eventId, "going");
+      const goingBob = async () => (await api("GET", `/events/${eventId}`, { userId: ada })).body.going;
+      const searchBob = async () => (await api("GET", "/users/search?q=bob", { userId: ada })).body.users;
+      expect((await goingBob())[0]).toMatchObject({ isFriend: true, contacts: { phone: "555-0100" } });
+
+      await unfriend(ada, bob);
+      expect(await goingBob()).toEqual([{ id: bob, name: "Bob", isFriend: false }]);
+      expect(await searchBob()).toEqual([{ id: bob, name: "Bob", isFriend: false }]);
+    });
+
+    it("their going events disappear from /friends/events", async () => {
+      await makeFriends(ada, bob);
+      await swipe(bob, await insertEvent({ startsAt: hoursFromNow(5) }), "going");
+      expect((await api("GET", "/friends/events", { userId: ada })).body.events).toHaveLength(1);
+      await unfriend(ada, bob);
+      expect((await api("GET", "/friends/events", { userId: ada })).body).toEqual({ events: [] });
+    });
+
+    it("not friends -> 404", async () => {
+      expect(await unfriend(ada, bob)).toEqual({ status: 404, body: { error: expect.any(String) } });
+      expect((await unfriend(ada, UNKNOWN_UUID)).status).toBe(404);
+    });
+
+    it("only a pending request (either direction) -> 404, and the pending row is intact", async () => {
+      await request(ada, bob);
+      expect((await unfriend(ada, bob)).status).toBe(404);
+      expect((await unfriend(bob, ada)).status).toBe(404);
+      expect(await friendRows()).toEqual([`${ada}->${bob}:requested`]);
+    });
+
+    it("self -> 400, malformed id -> 400", async () => {
+      expect((await unfriend(ada, ada)).status).toBe(400);
+      expect((await unfriend(ada, "not-a-uuid")).status).toBe(400);
+    });
+
+    it.each([
+      ["the unfriender", true],
+      ["the unfriended", false],
+    ])("%s can request again afterwards", async (_label, byUnfriender) => {
+      await makeFriends(ada, bob);
+      await unfriend(ada, bob);
+      const [from, to] = byUnfriender ? [ada, bob] : [bob, ada];
+      expect(await request(from, to)).toEqual({ status: 201, body: { status: "requested" } });
+      expect(await friendRows()).toEqual([`${from}->${to}:requested`]);
+    });
+
+    it("no auth -> 401, nothing removed", async () => {
+      await makeFriends(ada, bob);
+      expect((await api("DELETE", `/friends/${bob}`)).status).toBe(401);
+      expect(await friendRows()).toHaveLength(2);
+    });
+  });
 });

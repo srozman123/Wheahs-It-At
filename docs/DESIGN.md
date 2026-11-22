@@ -227,7 +227,7 @@ export const FEED_CONFIG = {
 
 - `users` gained `email` (unique, always stored lowercased and trimmed) and `password_hash` (bcrypt).
 - "This week" in the feed means a rolling 7 days from now, not the calendar week.
-- There is no way to decline a friend request yet.
+- Declining a request deletes it silently (the requester can ask again); unfriending removes both friendship rows, which hides contacts immediately.
 - User search matches a name substring or an exact email only, never an email substring.
 - Posting an event automatically marks the creator as Going.
 - Seed data is identifiable by `source_url` starting with `seed://` and emails ending in `@seed.test`; `npm run db:clear-seed` removes exactly that.

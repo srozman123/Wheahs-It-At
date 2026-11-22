@@ -1,6 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 import {
   acceptRequest,
+  deleteFriendship,
+  deletePendingRequest,
   findRelationship,
   insertRequest,
   listAcceptedFriendIds,
@@ -67,4 +69,20 @@ export async function listRequests(me: string) {
     incoming: incoming.map((user) => toPublicUser(user, false)),
     outgoing: outgoing.map((user) => toPublicUser(user, false)),
   };
+}
+
+// The requester is not told; they can simply send a new request later.
+export async function declineFriend(me: string, them: string): Promise<void> {
+  if (!(await deletePendingRequest(them, me))) {
+    throw new HTTPException(404, { message: "No pending request from this user" });
+  }
+}
+
+export async function removeFriend(me: string, them: string): Promise<void> {
+  if (me === them) {
+    throw new HTTPException(400, { message: "You can't unfriend yourself" });
+  }
+  if (!(await deleteFriendship(me, them))) {
+    throw new HTTPException(404, { message: "Not friends with this user" });
+  }
 }
