@@ -105,10 +105,10 @@ npm run db:clear-seed
 
 ```bash
 sudo npm i -g pm2
-pm2 start npm --name wheahs-api -- start
+pm2 start npm --name Wheahs-it-at-api -- start
 pm2 save
 pm2 startup          # prints a command starting with "sudo env PATH=..."; copy and run it
-pm2 logs wheahs-api  # Ctrl+C to leave
+pm2 logs Wheahs-it-at-api  # Ctrl+C to leave
 ```
 
 ## 10. Verify
@@ -133,13 +133,13 @@ Expected: `{"ok":true}` and a list of tags.
 ```bash
 cd ~/Wheahs-It-At && git pull
 cd apps/server && npm ci
-pm2 restart wheahs-api
+pm2 restart Wheahs-it-at-api
 ```
 
 ## Troubleshooting
 
 - **Laptop can't reach port 3000:** check `sudo ufw status` shows 3000/tcp, and that nothing else blocks it (some Wi-Fi networks do; try a phone hotspot). `curl localhost:3000/health` on the server tells you whether the API itself is up.
-- **Database connection refused or timeout:** the server's IPv4 is probably missing from Tiger Data's allow-list, or `DATABASE_URL` is wrong. Check `pm2 logs wheahs-api`.
+- **Database connection refused or timeout:** the server's IPv4 is probably missing from Tiger Data's allow-list, or `DATABASE_URL` is wrong. Check `pm2 logs Wheahs-it-at-api`.
 - **SSL errors:** make sure the connection string ends with `?sslmode=require&uselibpqcompat=true` and is the direct connection string. `self-signed certificate in certificate chain` means the flag is missing.
 - **API doesn't come back after a reboot:** run `pm2 save` after starting it, and make sure you ran the command `pm2 startup` printed. Check with `pm2 status`.
 
