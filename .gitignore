@@ -5,3 +5,7 @@ dist/
 !.env.example
 .DS_Store
 *.log
+
+# Imported event data (regenerated, not committed)
+apps/server/data/
+docs/PROMPT_event_import.md

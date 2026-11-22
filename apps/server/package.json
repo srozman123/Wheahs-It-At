@@ -10,9 +10,15 @@
     "test": "vitest run",
     "db:setup": "tsx src/scripts/setup.ts",
     "db:seed": "tsx src/scripts/seed.ts",
-    "db:clear-seed": "tsx src/scripts/clear-seed.ts"
+    "db:clear-seed": "tsx src/scripts/clear-seed.ts",
+    "import": "tsx src/import/cli.ts all",
+    "import:fetch": "tsx src/import/cli.ts fetch",
+    "import:normalize": "tsx src/import/cli.ts normalize",
+    "import:save": "tsx src/import/cli.ts save",
+    "import:clear": "tsx src/import/cli.ts clear"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
     "@hono/node-server": "^2.1.11",
     "@hono/zod-validator": "^0.9.1",
     "bcryptjs": "^3.0.3",
