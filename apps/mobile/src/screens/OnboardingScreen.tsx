@@ -79,7 +79,7 @@ function StepWho(props: {
   const ready = props.name.trim().length > 0 && props.contact.trim().length > 0;
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <Animated.View entering={FadeInRight.springify()} exiting={FadeOutLeft} style={{ flex: 1 }}>
+      <Animated.View entering={FadeInRight.duration(250)} exiting={FadeOutLeft} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
           <View style={styles.mascotRow}>
             <TrolleyMascot size={96} mood="wink" />
@@ -127,7 +127,7 @@ function StepInterests({ interests, toggle, onNext }: { interests: string[]; tog
   const bubbleText =
     interests.length === 0 ? "What are you into? Tap a few!" : left > 0 ? `Nice! ${left} more…` : 'Ooh, great taste 😎';
   return (
-    <Animated.View entering={FadeInRight.springify()} exiting={FadeOutLeft} style={{ flex: 1 }}>
+    <Animated.View entering={FadeInRight.duration(250)} exiting={FadeOutLeft} style={{ flex: 1 }}>
       <View style={styles.mascotRow}>
         <TrolleyMascot size={96} mood={left > 0 ? 'happy' : 'excited'} />
         <SpeechBubble text={bubbleText} style={{ flex: 1 }} />
@@ -199,7 +199,7 @@ function StepTutorial({ onDone }: { onDone: () => void }) {
   const cardH = Math.round(cardW * 1.2);
 
   return (
-    <Animated.View entering={FadeInRight.springify()} style={{ flex: 1 }}>
+    <Animated.View entering={FadeInRight.duration(250)} style={{ flex: 1 }}>
       <View style={styles.mascotRow}>
         <TrolleyMascot size={96} mood={allDone ? 'excited' : 'peek'} />
         <SpeechBubble text={allDone ? "You're a pro! Let's go 🎉" : `${next.arrow}  ${next.text}`} style={{ flex: 1 }} />
@@ -221,7 +221,7 @@ function StepTutorial({ onDone }: { onDone: () => void }) {
 
       <View style={styles.practiceArea}>
         {allDone ? (
-          <Animated.View entering={ZoomIn.springify()} style={{ alignItems: 'center', gap: 8 }}>
+          <Animated.View entering={ZoomIn.duration(250)} style={{ alignItems: 'center', gap: 8 }}>
             <TrolleyMascot size={180} mood="excited" sign="LET'S GO" />
           </Animated.View>
         ) : (

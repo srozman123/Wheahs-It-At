@@ -1,12 +1,12 @@
 import type { WithSpringConfig } from 'react-native-reanimated';
 
-/** Spring presets. "bouncy" overshoots a little, which is what makes things feel playful. */
+/** Spring presets. None of these overshoot — nothing in the app bounces past its resting point. */
 export const springs = {
-  bouncy: { damping: 11, stiffness: 180, mass: 0.8 },
-  snappy: { damping: 18, stiffness: 260 },
-  gentle: { damping: 20, stiffness: 120 },
+  bouncy: { damping: 26, stiffness: 220, overshootClamping: true },
+  snappy: { damping: 26, stiffness: 260, overshootClamping: true },
+  gentle: { damping: 24, stiffness: 120, overshootClamping: true },
   /** Near-critically damped: returns to rest with no visible wobble. Used for cards. */
-  settle: { damping: 30, stiffness: 260 },
+  settle: { damping: 30, stiffness: 260, overshootClamping: true },
 } satisfies Record<string, WithSpringConfig>;
 
 /** Card flip: a plain eased turn (no spring) so it never overshoots the halfway point. */

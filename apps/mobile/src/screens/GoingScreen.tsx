@@ -34,7 +34,6 @@ export function GoingScreen() {
   return (
     <Screen>
       <Text style={styles.title}>Going</Text>
-      <Text style={styles.sub}>Your week, all lined up.</Text>
 
       {going.length === 0 ? (
         <View style={styles.empty}>

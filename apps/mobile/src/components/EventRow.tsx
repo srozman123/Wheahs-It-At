@@ -13,7 +13,7 @@ export function EventRow({ event, index, onPress, actions }: { event: Event; ind
   const expired = isExpired(event.startsAt);
   const { friends } = useGoingPeople(event);
   return (
-    <Animated.View entering={FadeInDown.delay(index * 50).springify()} exiting={ZoomOut} layout={LinearTransition.springify()}>
+    <Animated.View entering={FadeInDown.delay(index * 50).duration(250)} exiting={ZoomOut} layout={LinearTransition.duration(250)}>
       <Pressable onPress={onPress} style={({ pressed }) => [styles.row, expired && styles.expired, pressed && { transform: [{ scale: 0.98 }] }]}>
         <View style={styles.thumb}>
           <EventArt imageUrl={event.imageUrl} tags={event.tags} height={72} emojiSize={22} />

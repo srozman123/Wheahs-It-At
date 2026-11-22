@@ -20,7 +20,6 @@ export function FeedScreen() {
     <Screen>
       <View style={styles.header}>
         <View>
-          <Text style={styles.hello}>Hey {user?.name || 'there'} 👋</Text>
           <Text style={styles.title}>This week in Boston</Text>
         </View>
         <View style={styles.counter}>

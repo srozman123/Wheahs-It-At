@@ -5,7 +5,7 @@ import { colors, fonts } from '../theme';
 /** What the trolley is "saying". Re-mounts (and re-pops) whenever `text` changes. */
 export function SpeechBubble({ text, style }: { text: string; style?: StyleProp<ViewStyle> }) {
   return (
-    <Animated.View key={text} entering={ZoomIn.springify().damping(12)} style={[styles.wrap, style]}>
+    <Animated.View key={text} entering={ZoomIn.duration(220)} style={[styles.wrap, style]}>
       <View style={styles.bubble}>
         <Text style={styles.text}>{text}</Text>
       </View>

@@ -87,7 +87,7 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
   if (posted) {
     return (
       <Screen style={styles.center}>
-        <Animated.View entering={ZoomIn.springify()} style={{ alignItems: 'center', gap: 8 }}>
+        <Animated.View entering={ZoomIn.duration(250)} style={{ alignItems: 'center', gap: 8 }}>
           <SpeechBubble text="Posted! It's in everyone's feed now 🚀" />
           <TrolleyMascot size={200} mood="excited" sign="POSTED" />
           <ChunkyButton label="Back to swiping" variant="green" onPress={() => { reset(); onDone(); }} style={{ alignSelf: 'stretch', marginTop: 12 }} />
@@ -109,7 +109,7 @@ export function PostEventScreen({ onDone }: { onDone: () => void }) {
         <Text style={styles.stepName}>{STEPS[step]}</Text>
 
         <ScrollView key={step} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Animated.View entering={FadeInRight.springify()} style={{ gap: 16 }}>
+          <Animated.View entering={FadeInRight.duration(250)} style={{ gap: 16 }}>
             {step === 0 && (
               <>
                 <TextField label="Event name" placeholder="Rooftop jam session" value={title} onChangeText={setTitle} />

@@ -12,7 +12,7 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
       <View style={styles.hero}>
         <SpeechBubble text="Next stop: something fun this week!" />
         <TrolleyMascot size={220} mood="happy" />
-        <Animated.View entering={FadeInUp.delay(150).springify()} style={{ alignItems: 'center' }}>
+        <Animated.View entering={FadeInUp.delay(150).duration(250)} style={{ alignItems: 'center' }}>
           <Text style={styles.brand}>
             Wheahs <Text style={{ color: colors.green.base }}>It</Text> At
           </Text>
@@ -20,7 +20,7 @@ export function WelcomeScreen({ onSignUp, onLogIn }: { onSignUp: () => void; onL
         </Animated.View>
       </View>
 
-      <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.actions}>
+      <Animated.View entering={FadeInDown.delay(300).duration(250)} style={styles.actions}>
         <ChunkyButton label="Let's ride →" variant="green" size="lg" onPress={onSignUp} />
         <ChunkyButton label="I already have an account" variant="paper" onPress={onLogIn} />
       </Animated.View>

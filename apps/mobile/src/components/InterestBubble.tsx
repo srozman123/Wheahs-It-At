@@ -36,7 +36,7 @@ export function InterestBubble({ label, emoji, color, selected, onToggle, index 
   }));
 
   return (
-    <Animated.View entering={FadeIn.delay(index * 35).springify()} style={style}>
+    <Animated.View entering={FadeIn.delay(index * 35).duration(250)} style={style}>
       <Pressable
         onPress={() => {
           scale.value = withSequence(withTiming(0.85, { duration: 80 }), withSpring(1, springs.bouncy));

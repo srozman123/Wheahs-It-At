@@ -27,7 +27,6 @@ export function SavedScreen() {
   return (
     <Screen>
       <Text style={styles.title}>Saved</Text>
-      <Text style={styles.sub}>Maybes. Decide when you're ready.</Text>
 
       {saved.length === 0 ? (
         <View style={styles.empty}>

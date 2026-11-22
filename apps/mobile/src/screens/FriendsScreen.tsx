@@ -58,7 +58,7 @@ export function FriendsScreen() {
         {incoming.length > 0 && (
           <Section title="Requests" count={incoming.length}>
             {incoming.map((f) => (
-              <Animated.View key={f.id} layout={LinearTransition.springify()} style={styles.requestRow}>
+              <Animated.View key={f.id} layout={LinearTransition.duration(250)} style={styles.requestRow}>
                 <Avatar name={f.name} color={f.color} size={40} />
                 <Text style={styles.name}>{f.name} wants to be friends</Text>
                 <Pressable onPress={() => acceptFriend(f.id)} style={styles.acceptBtn}>
@@ -74,7 +74,7 @@ export function FriendsScreen() {
             <Text style={styles.muted}>When friends mark events as Going, they'll show up here.</Text>
           ) : (
             friendPlans.map(({ event, who }, i) => (
-              <Animated.View key={event.id} entering={FadeInDown.delay(i * 60).springify()}>
+              <Animated.View key={event.id} entering={FadeInDown.delay(i * 60).duration(250)}>
                 <Pressable onPress={() => setOpen(event)} style={({ pressed }) => [styles.planCard, pressed && { transform: [{ scale: 0.98 }] }]}>
                   <View style={styles.planTop}>
                     <AvatarStack people={who} size={30} />
