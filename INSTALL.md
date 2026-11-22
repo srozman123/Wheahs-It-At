@@ -44,7 +44,7 @@ Ubuntu cloud images may override these in `/etc/ssh/sshd_config.d/*.conf`; check
 ```bash
 sudo ufw allow OpenSSH
 sudo ufw allow 3000/tcp
-sudo ufw enable
+sudo ufw --force enable   # --force skips the y/n prompt so the block can be pasted
 sudo ufw status
 ```
 
@@ -58,7 +58,7 @@ node -v   # must print v24.x
 
 ## 6. Get the code
 
-The repo is public, so a plain HTTPS clone works with no token or key.
+The repo is public, so a plain HTTPS clone works with no token or key. The clone uses the default branch (`main`); the backend must be merged and pushed there first. Until then, clone the backend branch instead: `git clone -b feat/backend https://github.com/srozman123/Wheahs-It-At.git`.
 
 ```bash
 cd ~
@@ -71,8 +71,13 @@ npm ci
 
 ```bash
 cp .env.example .env
-nano .env
 chmod 600 .env
+```
+
+Then edit it on its own (Ctrl+O, Enter to save, Ctrl+X to exit):
+
+```bash
+nano .env
 ```
 
 - `DATABASE_URL`: the Tiger Data **direct** connection string, ending in `?sslmode=require&uselibpqcompat=true` (Tiger uses its own CA; without the flag `pg` rejects the cert).
