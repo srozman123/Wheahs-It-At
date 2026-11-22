@@ -15,6 +15,8 @@ function createPool(): pg.Pool {
     throw new Error("DB_SCHEMA must match /^[a-z_][a-z0-9_]*$/.");
   }
 
+  // Use a direct (non-pooler) connection: poolers may ignore this startup option.
+  // Tests guard against that by checking current_schema() before any destructive SQL.
   return new pg.Pool({
     connectionString,
     ...(schema ? { options: `-c search_path=${schema}` } : {}),
