@@ -30,7 +30,8 @@ const BODY_DARK = colors.green.dark;
  * "Woody" (working name) — our original Green Line–style trolley mascot.
  * Drawn entirely in SVG so it scales crisply and its face can change.
  */
-export function TrolleyMascot({ size = 160, mood = 'happy', sign = 'WHEAHS', idle = true }: Props) {
+export function TrolleyMascot({ size = 160, mood = 'happy', sign = 'WHEAH TO GO?', idle = true }: Props) {
+  const signW = Math.max(76, sign.length * 8 + 14);
   const bob = useSharedValue(0);
   const pop = useSharedValue(1);
 
@@ -65,11 +66,11 @@ export function TrolleyMascot({ size = 160, mood = 'happy', sign = 'WHEAHS', idl
         <Path d="M100 30 L84 14 L100 2 L116 14 Z" fill="none" stroke={INK} strokeWidth={4} strokeLinejoin="round" />
         <Line x1="78" y1="3" x2="122" y2="3" stroke={INK} strokeWidth={4} strokeLinecap="round" />
 
-        {/* destination sign */}
-        <Rect x="62" y="26" width="76" height="20" rx="6" fill={INK} />
+        {/* destination sign — widens to fit longer text */}
+        <Rect x={100 - signW / 2} y="22" width={signW} height="20" rx="6" fill={INK} />
         <SvgText
           x="100"
-          y="41"
+          y="37"
           fontSize={sign.length > 7 ? 11 : 13}
           fontFamily={fonts.bold}
           fill={colors.yellow.base}
